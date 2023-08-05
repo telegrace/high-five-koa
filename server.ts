@@ -15,12 +15,28 @@ app.use(serve(staticDirPath));
 
 let userCount = 0;
 
+const userList: Record<string, string> = {};
+
 io.on("connection", (socket: Socket) => {
 	userCount++;
-	io.emit("user-count", userCount);
+
+	userList[socket.id] = socket.id;
+	io.emit("new-connection", { userCount, connectingUserId: socket.id });
+	console.log("socket.id", socket.id);
+
+	socket.on("request-user-list", () => {
+		socket.emit("user-list", userList);
+	});
+
+	socket.on("mouse-move", ({ userId, mouseX, mouseY }) => {
+		console.log("mouse-move", userId, mouseX, mouseY);
+		socket.broadcast.emit("other-hand", { userId, mouseX, mouseY });
+	});
+
 	socket.on("disconnect", () => {
 		userCount--;
-		io.emit("user-count", userCount);
+		delete userList[socket.id];
+		io.emit("user-disconnected", { userCount, disconnectedUserId: socket.id });
 	});
 });
 
